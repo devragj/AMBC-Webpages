@@ -1,0 +1,1487 @@
+<!-- MIT license, at the bottom of the page. -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8"/>
+        <!-- Tableau styles -->
+        <style>
+                body {
+                        font-family: calibri, sans-serif;
+                }
+                .tableauARender {
+                        margin: 20px;
+                        position: relative;
+                }
+                .tableauATripleRender {
+                        margin-bottom: 40px;
+                        margin-left: 20px;
+                }
+                .tableauARenderWrapper {
+                        display: inline-block;
+                }
+                .tile {
+                        position: absolute;
+                        background-color: #FFF;
+                        box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
+                        border-radius: 5px;
+                        border-width: 1px;
+                        border-color: #262626;
+                        border-style: solid;
+                        margin-left: 2px;
+                        margin-top: 2px;
+                        width: 30px;
+                        height: 30px;
+                        line-height: 30px;
+                }
+                .tileText {
+                        line-height: inherit;
+                        width: 100%;
+                        text-align: center;
+                        font-size: 19px;
+                }
+                .comment {
+                        margin-left: 22px;
+                }
+                .tableauAGrid {
+                        position: relative;
+                        border-right: 1px solid rgba(19, 83, 150, 0.5);
+                        border-bottom: 1px solid rgba(19, 83, 150, 0.5);
+                }
+                .tableauAGridCell {
+                        width: 36px;
+                        height: 36px;
+                        border-style: solid;
+                        border-color: rgba(19, 83, 150, 0.5);
+                        border-width: 0px;
+                        border-top-width: 1px;
+                        border-left-width: 1px;
+                        position: absolute;
+                }
+        </style>
+        <!-- Controls styles -->
+        <style>
+                h3 {
+                        margin: 20px 10px 5px 50px;
+                }
+                span {
+                        display:inline-block;
+                        margin: 10px 20px;
+                }
+                button:hover{
+                        background: #3cf;
+                        border-radius: 5px;
+                }
+                .SmallButton {
+                        width: 70px;
+                }
+                .MediumButton {
+                        width: 90px;
+                }
+                .BigButton {
+                        width: 110px;
+                }
+                #Controls {
+                        margin: 10px 30px 20px 30px;
+                }
+                .showHide {
+                        width: 20px;
+                        height: 20px;
+                        background-color: black;
+                }
+                #showBox {
+                        margin: 20px 0px 0px 20px;
+                }
+                #hideBox {
+                        margin: 20px 0px -5px 20px;
+                }
+                #infoHolder {
+                        margin-left: 50px;
+                        margin-top: 20px;
+                }
+                .infoDiv {
+                        margin: 10px 30px;
+                        padding: 0px 10px;
+                        border: 1px solid black;
+                }
+                .toggleButton {
+                        margin: 20px;
+                }
+        </style>
+        <script>
+                class Row {
+                        constructor(r1, r2, r) {
+                                this.r1 = r1;
+                                this.r2 = r2;
+                                this.r = r;
+                        }
+                }
+
+                class Point{
+                        constructor(xArg, yArg){
+                                this.x = xArg;
+                                this.y = yArg;
+                        }
+                }
+
+                /**
+                 * Mike's code, please see his repo for comments.
+                 */
+                class ePerm {
+                        constructor(input, maxJump) {
+                                this.n = 0;
+                                this.data = [];
+                                this.isPartial = false;
+
+                                this.swr = null;
+                                this.swrNumbering = null;
+                                this.firsts = null;
+                                this.lasts = null;
+                                this.backs = null;
+                                this.next = null;
+
+                                if (Number.isInteger(input)) {
+                                        this.n = input;
+
+                                        let getRandomInt = function(max) {
+                                                return Math.floor(Math.random() * Math.floor(max));
+                                        }
+
+                                        let preData = [];
+                                        let source = [];
+                                        for(let i = 1; i <= this.n; i++) {
+                                                source.push(i);
+                                        }
+
+                                        for(let i = 0; i < this.n; i++) {
+                                                let choiceIndex = getRandomInt(this.n - i);
+                                                preData.push(source.splice(choiceIndex, 1)[0]);
+                                        }
+
+                                        for(let i = 0; i < this.n - 1; i++) {
+                                                let sign = getRandomInt(2) * 2 - 1;
+                                                this.data.push(preData[i] + sign * getRandomInt(maxJump) * this.n);
+                                        }
+
+                                        let total = this.n * (this.n - 1) / 2;
+                                        let sum = this.data.reduce((a, b) => a + b, 0);
+                                        this.data.push(total - sum);
+                                        this.data.push(this.data[0] + this.n);
+                                } else {
+                                        let l = (input.replace(/\[|\]/g, "")).split(",");
+                                        this.n = l.length;
+
+                                        for (let sI of l) {
+                                                this.data.push(parseInt(sI));
+                                        }
+
+                                        this.data.unshift(this.data[this.n - 1] - this.n);
+                                }
+                        }
+
+                        toString() {
+                                return "[" + this.data.slice(1).toString() + "]";
+                        }
+
+                        clearRiver(){
+                                this.swr = null;
+                                this.swrNumbering = null;
+                                this.firsts = null;
+                                this.lasts = null;
+                                this.backs = null;
+                                this.next = null;
+                        }
+
+                        modn(k) {
+                                return ((k % this.n) + this.n) % this.n;
+                        }
+
+                        /**
+                         * Display the numbers in the output tabloids as 1,...,n
+                         * rather than as 0,...,n-1.
+                         * @param  {Number} k
+                         * @return {Number}
+                         */
+                        modnOutput(k) {
+                                let output = ((k % this.n) + this.n) % this.n;
+                                if (output == 0) {
+                                        output = this.n;
+                                }
+
+                                return output;
+                        }
+
+                        modnStrPos(k) {
+                                if (k % this.n == 0) {
+                                        return this.n;
+                                }
+
+                                return ((k % this.n) + this.n) % this.n;
+                        }
+
+                        modulo(k, l){
+                                return ((k % l) + l) % l;
+                        }
+
+                        ceiling(k, l) {
+                                if (k % l == 0) {
+                                        return k / l;
+                                }
+
+                                return (k- ((k % l + l) % l) + l) / l;
+                        }
+
+                        isEmpty() {
+                                let answer = true;
+                                for (let i = 0; i < this.n; i++){
+                                        if(!(this.data[i] == null)){
+                                                answer = false;
+                                                break;
+                                        }
+                                }
+
+                                return answer;
+                        }
+
+                        isDefined(i) {
+                                       return !(this.data[this.modn(i)] == null);
+                        }
+
+                        get(i){
+                                if(!this.isDefined(i)) {
+                                        throw new Error("Attempting to access undefined ball.");
+                                }
+
+                                return this.data[this.modn(i)] + (i - this.modn(i));
+                        }
+
+                        getNumber(k) {
+                                if (!this.isDefined(k)) {
+                                        throw new Error("Attempting to find SWR numbering of undefined ball.");
+                                }
+
+                                this.setUpRiverTheory();
+                                return this.swrNumbering[this.modn(k)] + (k - this.modn(k)) / this.n * this.swr.size;
+                        }
+
+                        isLast(k) {
+                                if(!this.isDefined(k))
+                                        throw new Error("Attempting to access SWR numbering of undefined ball " + k + ".");
+                                this.setUpRiverTheory();
+                                return this.lasts.includes(k - this.n * ((this.getNumber(k) - this.modulo(this.getNumber(k), this.swr.size)) / this.swr.size));
+                        }
+
+                        getNext(k) {
+                                if (!this.isDefined(k)) {
+                                        throw new Error("Attempting to access SWR numbering of undefined ball.");
+                                }
+
+                                if(this.isLast(k)) {
+                                        throw new Error("Attempting to access next ball after a last one.");
+                                }
+
+                                this.setUpRiverTheory();
+                                return this.next.get(k - this.n * ((this.getNumber(k) - this.modulo(this.getNumber(k), this.swr.size)) / this.swr.size))
+                                                + this.n * ((this.getNumber(k) - this.modulo(this.getNumber(k), this.swr.size)) / this.swr.size);
+                        }
+
+                        getBackX(k) {
+                                if (!this.isDefined(k)) {
+                                        throw new Error("Attempting to access SWR numbering of undefined ball.");
+                                }
+
+                                this.setUpRiverTheory();
+                                return this.backs.get(k - this.n * ((this.getNumber(k) - this.modulo(this.getNumber(k), this.swr.size)) / this.swr.size)).x
+                                                + this.n * ((this.getNumber(k) - this.modulo(this.getNumber(k), this.swr.size)) / this.swr.size);
+                        }
+
+                        le(k, j) {
+                                if(!this.isDefined(k) || !this.isDefined(j))
+                                        throw new Error("Attempting to compare rows which are not part of the permutation");
+                                return (k > j && this.data[k] < this.data[j]) || (this.data[j] - this.data[k] > this.n);
+                        }
+
+                        isComparable (i, j){
+                                if(!this.isDefined(i) || !this.isDefined(j))
+                                        throw new Error("Attempting to compare rows which are not part of the permutation");
+                                return (i < j && this.data[i] > this.data[j]) || (i > j && this.data[i] < this.data[j]) || (Math.abs(this.data[i] - this.data[j]) > this.n);
+                        }
+
+                        antichains() {
+                                let ans = new Set();
+                                ans.add(new Set());
+                                let additional = new Set();
+                                let additionalAC;
+
+                                for (let i = this.data.length - 2; i >= 0; i--) {
+
+                                        if(!this.isDefined(i))
+                                                continue;
+                                        acs:
+                                        for(let ac of ans){
+                                                for(let j of ac){
+                                                        if (this.isComparable(i,j))
+                                                                continue acs;
+                                                }
+
+                                                additionalAC = new Set(ac);
+                                                additionalAC.add(i);
+                                                additional.add(additionalAC);
+                                        }
+
+                                        for (let element of additional) {
+                                                ans.add(element);
+                                        }
+
+                                        additional.clear();
+                                }
+
+                                return(ans);
+                        }
+
+                        makeSWR() {
+                                let ans = new Set();
+                                let cand = new Set();
+                                let antichains = this.antichains();
+                                let maxSize = 0;
+                                for (let ac of antichains) {
+                                        maxSize = Math.max(maxSize, ac.size);
+                                }
+
+                                for (let ac of antichains ){
+                                        if (ac.size == maxSize) {
+                                                ans = ac;
+                                                break;
+                                        }
+                                }
+
+                                for (let ac of antichains) {
+                                        if (ac.size < maxSize) {
+                                                continue;
+                                        }
+
+                                        for (let k of ac) {
+                                                for (let j of ans) {
+                                                        if (this.le(k,j) || k == j) {
+                                                                cand.add(k);
+                                                        } else if (this.le(j,k)) {
+                                                                cand.add(j);
+                                                        }
+                                                }
+                                        }
+
+                                        ans = cand;
+                                        cand = new Set();
+                                }
+
+                                this.swr = ans;
+                        }
+
+                        makeSWRNumbering() {
+                                this.swrNumbering = [];
+                                for (let i = 0; i < this.n; i++) {
+                                        this.swrNumbering.push(-Number.MAX_VALUE);
+                                }
+
+                                let sortedRiver = Array.from(this.swr);
+                                sortedRiver.sort(function(a, b) {
+                                        return a - b;
+                                });
+
+                                let count = 0;
+                                for (let i of sortedRiver) {
+                                        this.swrNumbering[i] = count;
+                                        count++;
+                                }
+
+                                let shifts = [];
+                                for (let k = 0; k < this.n; k++) {
+                                        shifts.push(new Map());
+                                        if (this.swr.has(k) || !this.isDefined(k)) {
+                                                continue;
+                                        }
+
+                                        for (let j = 0; j < this.n; j++){
+                                                if (!this.isDefined(j))  {
+                                                        continue;
+                                                }
+
+                                                shifts[k].set(j, Math.max(Math.max(this.ceiling(j - k, this.n) , this.ceiling((this.data[j] - this.data[k]), this.n)), 0));
+                                        }
+
+                                        shifts[k].delete(k);
+
+                                        jloop:
+                                        for (let j = 0; j < this.n; j++) {
+                                                if(!this.isDefined(j) || j == k) {
+                                                        continue;
+                                                }
+
+                                                for (let l of shifts[k].keys()) {
+                                                        if ((this.data[j] - this.n * shifts[k].get(j) < this.data[l] - this.n * shifts[k].get(l)) &&
+                                                                        (j - this.n * shifts[k].get(j) < l - this.n * shifts[k].get(l))) {
+                                                                shifts[k].delete(j);
+                                                                continue jloop;
+                                                        }
+                                                }
+                                        }
+                                }
+
+                                let visited = [];
+                                let curY = [];
+                                let steps = [];
+                                let cY;
+                                let v;
+                                let newv;
+                                let worth;
+                                let st;
+                                let newStuff;
+                                for (let k = 0; k < this.n; k++) {
+                                        if(this.swr.has(k) || !this.isDefined(k)) {
+                                                continue;
+                                        }
+
+                                        worth = -Number.MAX_VALUE;
+                                        curY.push(k);
+                                        visited.push(new Set([k]));
+                                        steps.push(0);
+                                        while (curY.length > 0) {
+                                                cY = curY.pop();
+                                                v = visited.pop();
+                                                st = steps.pop();
+                                                if (this.swr.has(this.modn(cY))) {
+                                                        worth = Math.max(worth, st + this.swrNumbering[this.modn(cY)] - (this.modn(cY) - cY) / this.n * this.swr.size);
+                                                } else {
+                                                        newStuff = new Set(shifts[this.modn(cY)].keys());
+                                                        for (let element of v) {
+                                                                newStuff.delete(element);
+                                                        }
+
+                                                        for (let z of newStuff) {
+                                                                curY.push(z - (this.modn(cY) - cY) - shifts[this.modn(cY)].get(z) * this.n);
+                                                                newv = new Set(v);
+                                                                newv.add(z);
+                                                                visited.push(newv);
+                                                                steps.push(st + 1);
+                                                        }
+                                                }
+                                        }
+
+                                        this.swrNumbering[k] = worth;
+                                }
+                        }
+
+                        makeSWRBallInfo(){
+                                this.firsts = [];
+                                this.lasts = [];
+                                this.next = new Map()
+                                this.backs = new Map();
+                                let ballsLabeledI;
+                                for (let i = 0; i < this.swr.size; i++) {
+                                        ballsLabeledI = [];
+                                        for (let j = 0; j < this.n; j++) {
+                                                if (!this.isDefined(j)) {
+                                                        continue;
+                                                }
+
+                                                if (((i - this.swrNumbering[j]) % this.swr.size) == 0) {
+                                                        ballsLabeledI.push(j + this.n * (i - this.swrNumbering[j]) / this.swr.size);
+                                                }
+                                        }
+
+                                        let perm = this;
+                                        let compareBalls = function(b1, b2) {
+                                                if (b1 > b2 && perm.get(b1) < perm.get(b2)) {
+                                                        return(-1);
+                                                }
+
+                                                if (b1 < b2 && perm.get(b1) > perm.get(b2)) {
+                                                        return(1);
+                                                }
+
+                                                return (0);
+                                        }
+
+                                        ballsLabeledI.sort(compareBalls);
+
+                                        this.firsts.push(ballsLabeledI[0]);
+                                        this.lasts.push(ballsLabeledI[ballsLabeledI.length - 1]);
+                                        for (let k = 0; k < ballsLabeledI.length - 1; k++) {
+                                                this.next.set(ballsLabeledI[k], ballsLabeledI[k + 1]);
+                                                this.backs.set(ballsLabeledI[k], new Point(this.get(ballsLabeledI[0]), ballsLabeledI[ballsLabeledI.length - 1])) ;
+                                        }
+
+                                        this.backs.set(ballsLabeledI[ballsLabeledI.length - 1], new Point(this.get(ballsLabeledI[0]), ballsLabeledI[ballsLabeledI.length - 1])) ;
+                                }
+                        }
+
+                        setUpRiverTheory() {
+                                if (this.swr == null) {
+                                        this.makeSWR();
+                                        this.makeSWRNumbering();
+                                        this.makeSWRBallInfo();
+                                }
+                        }
+
+                        forwardRSKStep() {
+                                if (this.isEmpty())
+                                        throw new Error("Attempting to do a forward step on an empty permutation");
+
+                                this.setUpRiverTheory();
+                                let r1 = new Set();
+                                let r2 = new Set();
+                                let r;
+                                for (let i of this.firsts) {
+                                        r1.add(this.modnOutput(this.get(i)));
+                                        // r1.add(this.modn(this.get(i)));
+                                }
+
+                                for (let i of this.lasts) {
+                                        r2.add(this.modnOutput(i));
+                                        // r2.add(this.modn(i));
+                                }
+
+                                let firstStripLasts = [];
+                                for (let i = 1; i < this.n + 1; i++) {
+                                        if (!this.isDefined(i)) {
+                                                continue;
+                                        }
+
+                                        if (this.isLast(i)) {
+                                                firstStripLasts.push(i);
+                                        }
+                                }
+                                let posInSquare = 0;
+                                for (let i = 1; i < firstStripLasts.length; i++) {
+                                        if (this.modnStrPos(this.getBackX(firstStripLasts[i])) < this.modnStrPos(this.getBackX(firstStripLasts[0]))) {
+                                                posInSquare++;
+                                        }
+                                }
+
+                                r = this.swr.size * (this.getBackX(firstStripLasts[0]) - this.modnStrPos(this.getBackX(firstStripLasts[0]))) / this.n + posInSquare;
+                                this.isPartial = true;
+                                let newData = [];
+                                for (let i = 0; i < this.n + 1; i++) {
+                                        if (!this.isDefined(i) || this.isLast(i)) {
+                                                newData.push(null);
+                                        } else {
+                                                newData.push(this.get(this.getNext(i)));
+                                        }
+                                }
+
+                                this.data = newData;
+                                this.clearRiver();
+                                return new Row(r1, r2, r);
+                        }
+                }
+
+                /**
+                 * Mostly, this is Mike's Tabloid class.
+                 * It also contains some code to interface with the drawing code.
+                 */
+                class TabloidA {
+                        constructor() {
+                                this.n = 0;
+                                this.data = new Map();
+                                this.numRows = 0;
+                                this.sh = [];
+                                this.degI = new Set();
+                                this.rows = [];
+                        }
+
+                        addRow(r) {
+                                if (r.size == 0) {
+                                        return;
+                                }
+
+                                this.numRows++;
+                                let row = [];
+
+                                for (let i of r) {
+                                        this.data.set(i, this.numRows - 1);
+                                        row.push(i);
+                                }
+
+                                this.sh.push(r.size);
+
+                                row.sort(function(a, b) {
+                                        return a - b;
+                                });
+                                this.rows.push(row);
+                        }
+
+                        /**
+                         * Interface with the drawing code
+                         */
+                        getTableauA() {
+                                let tableauA = new TableauA();
+                                for (let i = 0; i < this.numRows; i++) {
+                                        for (let j = 0; j < this.sh[i]; j++) {
+                                                let tile = new Tile({x: j, y: i, n: this.rows[i][j]});
+                                                tableauA.insertAtEnd(tile);
+                                        }
+                                }
+
+                                return tableauA;
+                        }
+                }
+
+                /**
+                 * This is a helper class for the {@link TableauA} class.
+                 * It is one of the member variables of that class.
+                 */
+                class TileGrid {
+                        /**
+                         * The constructor populates a TileGrid from an Array of Tiles.
+                         * @param {Tile[]} tileList - an array of Tiles (which is often empty).
+                         */
+                        constructor(tileList) {
+                                /**
+                                 * This is a 2D jagged array with the same shape as the tableau
+                                 * of which it is a member.
+                                 * Each entry of the array stores a reference to the Tile
+                                 * in that position of the tableau.
+                                 * @type {Domino[][]}
+                                 */
+                                this.grid = [];
+                                /**
+                                 * This array stores the length of each row of the tableau.
+                                 * @type {number[]}
+                                 */
+                                this.rowLengths = [];
+                                /**
+                                 * This array stores the length of each column of the tableau.
+                                 * @type {number[]}
+                                 */
+                                this.columnLengths = [];
+                                tileList.forEach((tile) => { this.addTile(tile);});
+                        }
+
+                        /**
+                         * This function sets the grid location at position (x, y) to
+                         * the <code>tile</code>.
+                         * @param {number} x
+                         * @param {number} y
+                         * @param {Tile} tile
+                         */
+                        set(x, y, tile) {
+                                if (!this.columnLengths[x] || this.columnLengths[x] <= y) {
+                                        this.columnLengths[x] = y + 1;
+                                }
+
+                                if (!this.rowLengths[y] || this.rowLengths[y] <= x) {
+                                        this.rowLengths[y] = x + 1;
+                                }
+
+                                if (!this.grid[y]) {
+                                        this.grid[y] = [];
+                                }
+
+                                this.grid[y][x] = tile;
+                        }
+
+                        /**
+                         * This function gets the tile at grid location (x, y).
+                         * @param {number} x
+                         * @param {number} y
+                         * @return {Tile|undefined}
+                         */
+                        get(x, y) {
+                                if (!this.rowLengths[y]) {
+                                        return undefined;
+                                }
+
+                                return this.grid[y][x];
+                        }
+
+                        /**
+                        * This function gets the content the tile at grid location (x, y).
+                        * This content may be a number or a sign.
+                        * If there is no tile at this location,
+                        * the function returns undefined.
+                         * @param {number} x
+                         * @param {number} y
+                         * @return {number|string|undefined}
+                         */
+                        getContent(x, y) {
+                                let tile = this.get(x, y);
+                                if (tile) {
+                                        return tile.n;
+                                }
+
+                                return undefined;
+                        }
+
+                        /**
+                         * This function sets the grid location at the position
+                         * of a tile to that tile.
+                         * @param {Tile} tile
+                         */
+                        addTile(tile) {
+                                this.set(tile.x, tile.y, tile);
+                        }
+
+                        /**
+                         * This function removes a Tile from the grid
+                         * given that the tile is in a position at the edge of the tableau.
+                         * @param {Object} position - an object which holds the x and y coordinates
+                         * of the tile to be removed
+                         * @param {number} position.x
+                         * @param {number} position.y
+                         */
+                        removeExtremal(position) {
+                                if (position.x == 0) {
+                                        this.grid.pop();
+                                } else {
+                                        this.grid[position.y].pop();
+                                }
+
+                                this.rowLengths[position.y]--;
+                                this.columnLengths[position.x]--;
+                        }
+
+                        /**
+                         * @param {number} i - the zero-based index of the row
+                         * @return {number} the length of the ith row
+                         */
+                        getRowLength(i) {
+                                if (!this.rowLengths[i]) {
+                                        return 0;
+                                }
+
+                                return this.rowLengths[i];
+                        }
+
+                        /**
+                         * @param {number} j - the zero-based index of the column
+                         * @return {number} the length of the jth column
+                         */
+                        getColumnLength(j) {
+                                if (!this.columnLengths[j]) {
+                                        return 0;
+                                }
+
+                                return this.columnLengths[j];
+                        }
+                }
+
+                /**
+                 * This class stores the information for one tile of the tableau.
+                 */
+                class Tile {
+                        /**
+                         * @param {Object} table
+                         * @param {number} table.n - The number occupying the tile.
+                         * Though, in some uses, the tile
+                         * is occupied by a sign, not a number.
+                         * @param {number} table.x - The x-coordinate of the tile in the tableau.  Zero-based, zero on the left.
+                         * @param {number} table.y - The y-coordinate of the tile in the tableau.  Zero-based, zero on top.
+                         */
+                        constructor(table) {
+                                /**
+                                 * the content of the Tile
+                                 * @type {number|string}
+                                 */
+                                this.n = table.n;
+                                /**
+                                 * The x-coordinate of the location of the tile.
+                                 * in the tableau.
+                                 * Zero-based, zero on the left.
+                                 * @type {number}
+                                 */
+                                this.x = table.x;
+                                /**
+                                 * The y-coordinate of the location of the tile.
+                                 * in the tableau.
+                                 * Zero-based, zero on top.
+                                 * @type {number}
+                                 */
+                                this.y = table.y;
+                        }
+
+                        /**
+                         * makes a copy
+                         * @return {Tile}
+                         */
+                        clone() {
+                                return new Tile(this);
+                        }
+
+                        /**
+                         * @return {string}
+                         */
+                        toString() {
+                                let tileString = "Tile { n: " + this.n + ", x: " + this.x + ", y: " + this.y + " }";
+                                return tileString;
+                        }
+
+                        /**
+                         * makes a deep copy of an array of Tile
+                         * @param {Tile[]} tileList
+                         * @return {Tile[]}
+                         */
+                        static cloneList(tileList) {
+                                let newList = [];
+                                tileList.forEach((tile) => {newList.push(tile.clone())});
+                                return newList;
+                        }
+                }
+
+                /**
+                 * This class manages the tableau itself.  It stores the same information
+                 * in two member variables.  So, inserts and deletes have to update both.
+                 * This class is called TableauA to distinguish it from the Tableau class.
+                 * This class handles tableaux of type A.  The Tableau class
+                 * handles domino tableaux, that is, tableaux for types B, C, and D.
+                 */
+                class TableauA {
+                        /**
+                         * The constructor creates a TableauA from an Array of Tiles.<br>
+                         * @param {Tile[]} [tileList = []] - an array of Tiles (which is often empty).
+                         */
+                        constructor(tileList) {
+                                /**
+                                 * an array of references to the Tiles of the tableau.
+                                 * @type {Tile[]}
+                                 */
+                                this.tileList = tileList || [];
+                                /**
+                                 * see {@link TileGrid}
+                                 * @type {TileGrid}
+                                 */
+                                this.tileGrid = new TileGrid(this.tileList);
+                        }
+
+                        /**
+                         *  makes a deep copy
+                         *  @return {TableauA}
+                         */
+                        clone() {
+                                return new TableauA(Tile.cloneList(this.tileList));
+                        }
+
+                        /**
+                        *  This function uses the {@link TableauARendererDOM} class
+                       *  to draw the TableauA on a webpage.
+                         */
+                        draw() {
+                                document.body.appendChild(new TableauARendererDOM(this).renderDOM());
+                        }
+
+                        /**
+                         * @param {Tile} tile - the Tile to add
+                         */
+                        insertAtEnd(tile) {
+                                this.tileList.push(tile);
+                                this.tileGrid.addTile(tile);
+                        }
+
+                        /**
+                         * @param {number} i - the zero-based index of the row
+                         * @return {number} the length of the ith row
+                         */
+                        getRowLength(i) {
+                                return this.tileGrid.getRowLength(i);
+                        }
+
+                        /**
+                         * @param {number} j - the zero-based index of the column
+                         * @return {number} the length of the jth column
+                         */
+                        getColumnLength(j) {
+                                return this.tileGrid.getColumnLength(j);
+                        }
+
+                }
+
+                /**
+                 * Class for drawing a single {@link TableauA} on a webpage
+                 */
+                class TableauARendererDOM {
+                        /**
+                         * @param {TableauA} tableau - the tableau to draw
+                         */
+                        constructor(tableau) {
+                                /**
+                                 * the tableau to draw
+                                 * @type {TableauWithGrid|Tableau}
+                                 */
+                                this.tableau = tableau;
+                                /**
+                                 * This is the size of the side of the square
+                                 * alloted to each Tile when drawn, in pixels.
+                                 * The tableau is drawn with a background grid,
+                                 * so this is the size of a side of a square
+                                 * in the background grid.
+                                 * @type {Number}
+                                 */
+                                this.gridSize = 36;
+                        }
+
+                        /**
+                         * This is helper function for {@link TableauARendererDOM#renderDOM}
+                         * which makes the DOM element for one tile in the tableau.
+                         * @param {Tile} tile - the tile to render
+                         * @return {Object} the rendered tile
+                         */
+                        makeTileElement(tile) {
+                                let tileElement = document.createElement('div');
+                                tileElement.className = "tile";
+
+                                if (tile.highlight) {
+                                        tileElement.className += " tileHighlighted" + tile.highlight.toString();
+                                }
+
+                                let x = tile.x;
+                                let y = tile.y;
+
+                                tileElement.style.left = x * this.gridSize + "px";
+                                tileElement.style.top = y * this.gridSize + "px";
+
+                                let tileText = document.createElement('div');
+                                tileText.className = "tileText";
+                                tileText.innerHTML = tile.n;
+                                tileElement.appendChild(tileText);
+
+                                return tileElement;
+                        }
+
+                        /**
+                         * This is helper function for {@link TableauARendererDOM#renderDOM}
+                         *  which makes and fills the DOM element for the background grid.
+                         * @param {number} width - the width of the grid, in number of squares
+                         * @param {number} height - the height of the grid, in number of squares
+                         * @return {Object} the DOM element, filled with grid cells
+                         */
+                        makeGridElement(width, height) {
+                                let gridElement = document.createElement('div');
+                                gridElement.className = "tableauAGrid";
+                                gridElement.style.width = width * this.gridSize + "px";
+                                gridElement.style.height = height * this.gridSize + "px";
+
+                                for(let i = 0; i < height; i += 1) {
+                                        for(let j = 0; j < width; j += 1) {
+                                                let gridCell = document.createElement('div');
+                                                gridCell.className = "tableauAGridCell";
+                                                gridCell.style.left = j * this.gridSize + "px";
+                                                gridCell.style.top  = i * this.gridSize + "px";
+
+                                                gridElement.appendChild(gridCell);
+                                        }
+                                }
+
+                                return gridElement;
+                        }
+
+                        /**
+                         * This function creates the DOM element for the {@link TableauA}.
+                         * @return {Object} the rendered tableau
+                         */
+                        renderDOM() {
+                                let wrapper = document.createElement('div');
+                                wrapper.className = "tableauARender";
+
+                                for (let tile of this.tableau.tileList) {
+                                        let tileElement = this.makeTileElement(tile);
+                                        wrapper.appendChild(tileElement);
+                                }
+
+                                let width = this.tableau.getRowLength(0);
+                                let height = this.tableau.getColumnLength(0);
+                                wrapper.style.width = width * this.gridSize + "px";
+                                wrapper.style.height = height * this.gridSize + "px";
+
+                                let gridElement = this.makeGridElement(width, height);
+                                wrapper.appendChild(gridElement);
+
+                                return wrapper;
+                        }
+                }
+
+                /**
+                 * Mostly, this is interface code.
+                 */
+                class TabloidATriple {
+                        constructor(left, right, rho) {
+                                if (!left) {
+                                        this.left = new TabloidA();
+                                        this.right = new TabloidA();
+                                        this.rho = [];
+                                } else {
+                                        this.left = left;
+                                        this.right = right;
+                                        this.rho = rho;
+                                }
+                        }
+
+                        draw() {
+                                document.body.appendChild(new TabloidATripleRendererDOM(this).renderDOM());
+                        }
+
+                        static AMBC(perm) {
+                                let P = new TabloidA( );
+                                let Q = new TabloidA( );
+                                let R = [];
+                                // Mike's code, from MatrixBallGUI.java
+                                while(!perm.isEmpty()) {
+                                        let nextRow = perm.forwardRSKStep();
+                                        P.addRow(nextRow.r1);
+                                        Q.addRow(nextRow.r2);
+                                        R.push(nextRow.r);
+                                }
+
+                                return new TabloidATriple(P, Q, R);
+                        }
+                }
+
+                /**
+                 * Drawing code for the tabloids.
+                 */
+                class TabloidATripleRendererDOM {
+
+                                        constructor(tabloidATriple) {
+
+                                                this.tabloidATriple = tabloidATriple;
+                                        }
+
+                                        getRhoTableauA() {
+                                                let rhoTableauA = new TableauA();
+                                                let rho = this.tabloidATriple.rho;
+                                                for (let i = 0; i < rho.length; i++) {
+                                                        let tile = new Tile({x: 0, y: i, n: rho[i]});
+                                                        rhoTableauA.insertAtEnd(tile);
+                                                }
+
+                                                return rhoTableauA;
+                                        }
+
+
+                                        renderDOM() {
+                                                let leftRenderer = new TableauARendererDOM(this.tabloidATriple.left.getTableauA());
+                                                let middleRenderer = new TableauARendererDOM(this.tabloidATriple.right.getTableauA());
+                                                let rightRenderer = new TableauARendererDOM(this.getRhoTableauA());
+                                                let wrapperLeft = leftRenderer.renderDOM();
+                                                let wrapperMiddle = middleRenderer.renderDOM();
+                                                let wrapperRight = rightRenderer.renderDOM();
+
+                                                wrapperLeft.className += " tableauARenderWrapper";
+                                                wrapperMiddle.className += " tableauARenderWrapper";
+                                                wrapperRight.className += " tableauARenderWrapper";
+
+                                                let wrapper = document.createElement('div');
+                                                wrapper.className = "tableauATripleRender";
+
+                                                wrapper.appendChild(wrapperLeft);
+                                                wrapper.appendChild(wrapperMiddle);
+                                                wrapper.appendChild(wrapperRight);
+
+                                                return wrapper;
+                                        }
+                                }
+
+                /**
+                 * The Page class is responsible for processing the user input to the webpage,
+                 * and for calling methods to supply the desired output.
+                 * This class is used by all the algorithm pages.
+                 * In many cases, differences between the pages can be handled
+                 * by the inputs to the constructor, which are mostly function objects.
+                 * In some cases, we need to extend the Page class.<br><br>
+                 * In most of the pages, there are two ways to obtain the input parameter
+                 * (randomly-generated and explicit), and two ways to display the output
+                 * (all at once or step by step).
+                 * Thus four functions are needed to execute these procedures,
+                 * and these are input to the constructor.
+                 */
+                class Page {
+                        /**
+                         * @param {Object} table
+                         * @param {string[]} table.clearList - a list of the class names of the DOM
+                         * objects on the page which need to be removed when the user requests new output.
+                         * @param {function} table.getDrawable - the function which,
+                         * when given a parameter object, returns the output to be drawn on the page.
+                         */
+                        constructor(table) {
+                                /**
+                                 * a list of the class names of the DOM
+                                 * objects on the page which need to be
+                                 * removed when the user requests new output.
+                                 * @type {string[]}
+                                 */
+                                this.clearList = table.clearList;
+                                /**
+                                 * in a basic page, the function which,
+                                 * when given a parameter object,
+                                 * returns the output to be drawn on the page.
+                                 * @type {function}
+                                 */
+                                this.getDrawable = table.getDrawable;
+                        }
+
+                        /**
+                         * This function gets the input from a textbox which expects
+                         * an integer, parses, and checks the input
+                         * @param {string} boxName - the id of the textbox
+                         * @param {number} cutoff - the minimum allowed value of the integer
+                         * @param {string} errorMessage - message to be shown in an alert box
+                         * if the entry is not proper
+                         * @param {boolean} [emptyOK] - if true, the box can be empty
+                         * @return {number|undefined}  the value obtained from the textbox
+                         *  or undefined if the box is empty and this is permitted
+                         * @throws {Error}  if the entry fails
+                         */
+                        getIntegerFromBox(boxName, min, max, errorMessage, emptyOK) {
+                                let entry = document.getElementById(boxName).value.trim();
+                                if (entry == '' && emptyOK) {
+                                        return undefined;
+                                }
+
+                                let number = parseInt(entry);
+                                if (isNaN(number) || number < min || number > max) {
+                                        alert(errorMessage);
+                                        throw new Error("Bad entry in " + boxName);
+                                }
+
+                                return number;
+                        }
+
+                        /**
+                         * This function calls {@link Page#getIntegerFromBox} to obtain the
+                         * value from the textbox with id 'nbox'
+                         */
+                        getN() {
+                                let message = "Please enter a whole number between 1 and 20 in the n box.";
+                                return this.getIntegerFromBox('nbox', 1, 20, message);
+                        }
+
+                        /**
+                         * This function calls {@link Page#getIntegerFromBox} to obtain the
+                         * value from the box with id 'maxbox'.
+                         */
+                        getMaxJump() {
+                                let message = "Please enter a a whole number between 1 and 5 in the Furthest Randomness box.";
+                                return this.getIntegerFromBox('maxbox', 1, 5, message);
+                        }
+
+                        /**
+                         * This function gets a user-entered parameter
+                         * and returns a parameter object.
+                         * It has a try-catch block in case the
+                         * parse function does error checking.
+                         * @param {string} errorMessage - the message to use to alert
+                         * the user of a defect in the parameter string.
+                         * @throws {Error} This function throws an error if it catches an error
+                         * thrown by the parameter parser.
+                         */
+                        getParameterFromBox() {
+                                let errorMessage = "Please check your entry."
+                                let entry = document.getElementById('parameterBox').value.trim();
+                                try {
+                                        let parameterObject = new ePerm(entry);
+                                        if (parameterObject.data.length > 21) {
+                                                alert("Please enter a permutation of length no more than 20.");
+                                                return;
+                                        }
+
+                                        return parameterObject;
+                                } catch (e) {
+                                        alert(errorMessage);
+                                        throw new Error("Bad input to getParameterFromBox.");
+                                }
+                        }
+
+                        /**
+                         * This function is triggered when the user clicks the Run button which
+                         * generates a random parameter.
+                         */
+                        runInput() {
+                                // this.clearPrevious();
+                                try {
+                                        let n = this.getN();
+                                        let maxJump = this.getMaxJump();
+
+                                        let parameterObject = new ePerm(n, maxJump);
+                                        this.displayInputAndOutput(parameterObject);
+                                } catch (e) {
+
+                                }
+                        }
+
+                        /**
+                         * This function is triggered when the user clicks the Run button which
+                         * operates on a parameter string entered by the user. It calls
+                         * {@link Page#getParameterFromBox} to obtain the user input required,
+                         * and then calls {@link Page#displayInputAndOutput} to do the rest of the work.
+                         * This function has a try-catch block, however the catch block is currently
+                         * empty, as the work of alerting the user to errors is done by the
+                         * function which obtains the user input.
+                         */
+                        runParameter() {
+                                // this.clearPrevious();
+                                try {
+                                        let parameterObject = this.getParameterFromBox();
+                                        this.displayInputAndOutput(parameterObject);
+                                } catch (e) {
+
+                                }
+
+                        }
+
+                        /**
+                         * This function displays the output of the algorithm on the page.
+                         * @param {Object} parameterObject - the parameter object which is the input
+                         * to the algorithm.
+                         */
+                        displayInputAndOutput(parameterObject) {
+                                this.displayInfo(parameterObject);
+                                let drawable = this.getDrawable(parameterObject, this.type);
+                                drawable.draw();
+                        }
+
+                        /**
+                         * This is the event handler for the keyup event in the nbox or maxbox.
+                         * When the Enter key is pressed, this clicks the runRandomButton.
+                         * @param {Object} event - DOM event object
+                         */
+                        static randomKey(event) {
+                                event.preventDefault();
+                                if (event.keyCode == 13) {
+                                        document.getElementById("runRandomButton").click();
+                                }
+                        }
+
+                        /**
+                         * This is the event handler for the keyup event in the parameterBox.
+                         * When the Enter key is pressed, this clicks the runParameterButton.
+                         * @param {Object} event - DOM event object
+                         */
+                        static parameterKey(event) {
+                                event.preventDefault();
+                                if (event.keyCode == 13) {
+                                        document.getElementById("runParameterButton").click();
+                                }
+                        }
+
+                        /**
+                         * This function displays the parameter
+                         * and any information entered into the comment box.
+                         * @param {Object} parameterObject - the parameter object which is the input
+                         * to the algorithm.
+                         */
+                        displayInfo(parameterObject) {
+                                let wrapper = document.createElement('div');
+                                wrapper.className = "comment";
+                                let parameterSpan = document.createElement('span');
+                                parameterSpan.style.marginRight = "10px";
+                                parameterSpan.innerHTML = parameterObject.toString();
+                                wrapper.appendChild(parameterSpan);
+                                let commentSpan = document.createElement('span');
+                                commentSpan.style.marginLeft = "10px";
+                                let comment = document.getElementById("commentBox").value.trim();
+                                commentSpan.innerHTML= comment;
+                                wrapper.appendChild(commentSpan);
+                                document.body.appendChild(wrapper);
+                        }
+
+                        /**
+                         * This function removes all items on the page which have the given CSS class.
+                         * @param {string} className - the name of the CSS class to remove.
+                         */
+                        static clearItems(className) {
+                                let itemList = document.getElementsByClassName(className);
+                                for (let index = itemList.length - 1; index >= 0; --index) {
+                                        let item = itemList[index];
+                                        item.parentNode.removeChild(item);
+                                }
+                        }
+
+                        /**
+                         * This function removes all output from the page.
+                         */
+                        clearPrevious() {
+                                this.clearList.forEach((type) => Page.clearItems(type));
+                        }
+
+                        /**
+                         * This function removes the last item on the page which has the given CSS class.
+                         * @param {string} className - the name of the CSS class to remove.
+                         */
+                        static clearLastItem(className) {
+                                let itemList = document.getElementsByClassName(className);
+                                let item = itemList[itemList.length - 1];
+                                item.parentNode.removeChild(item);
+                        }
+
+                        /**
+                         * This function removes the last item of each CSS class in the clear list.
+                         */
+                        clearLastItems() {
+                                this.clearList.forEach((type) => Page.clearLastItem(type));
+                        }
+
+                        /**
+                         * This function hides the Controls div, for cleaner printing.
+                         */
+                        static hideControls() {
+                                let showBox = document.getElementById('showBox');
+                                showBox.style.display = 'block';
+                                let controls = document.getElementById('Controls');
+                                controls.style.display = 'none';
+                        }
+
+                        /**
+                         * This function displays the Controls div again.
+                         */
+                        static showControls() {
+                                let controls = document.getElementById('Controls');
+                                controls.style.display = 'block';
+                                let showBox = document.getElementById('showBox');
+                                showBox.style.display = 'none';
+                        }
+
+
+                        /**
+                         * This function toggles the display of a div.
+                         * @param {string|Object} info - If a string, the id of the div to toggle.
+                         * If not, it is the div itself.
+                         */
+                        static showHide(info) {
+                                let divToToggle;
+                                if (typeof(info) == "string") {
+                                        divToToggle = document.getElementById(info);
+                                } else {
+                                        divToToggle = info;
+                                }
+
+                                if (divToToggle.style.display == 'block') {
+                                        divToToggle.style.display = 'none';
+                                } else {
+                                        divToToggle.style.display = 'block';
+                                }
+
+                        }
+
+                        /**
+                         * This function toggles the display of a div, as well as changing
+                         * the label of the button whose click triggers the event.
+                         * @param {Object} button - the button whose click triggers the event.
+                         */
+                        static toggleDiv(button) {
+                                let text = button.innerHTML;
+                                let divName = "Div";
+                                if (text[0] == "H") {
+                                        let newText = text.slice(5);
+                                        divName = newText + divName;
+                                        button.innerHTML = newText;
+                                }
+
+                                else {
+                                        divName = text + divName;
+                                        button.innerHTML = "Hide " + text;
+                                }
+
+                                let div = document.getElementById(divName);
+                                this.showHide(div);
+                        }
+                }
+
+                /**
+                 * The configuration object for the webpage AMBC.html.
+                 */
+                const pageAMBC = new Page({
+                        clearList: ['comment', 'tableauATripleRender'],
+                        getDrawable: TabloidATriple.AMBC
+                        });
+
+        </script>
+        <title>AMBC Algorithm</title>
+</head>
+<body>
+        <span id="showBox" class="showHide" onClick="Page.showControls()" style="display:none"></span>
+        <div id="Controls" style="display:block">
+                <h3 style="margin-top: 10px">AMBC Algorithm
+                        <button type="button" class="toggleButton" onclick="Page.toggleDiv(this)">Instructions</button>
+                        <button type="button" class="toggleButton" onclick="Page.toggleDiv(this)">Information</button>
+                        <span id="hideBox" class="showHide" onClick="Page.hideControls()"></span>
+                </h3>
+                <div class="infoDiv" id="InstructionsDiv" style="display:none">
+                        <p>
+                                This page can be used in two ways.&nbsp;
+                                First, you can have the page generate a random affine permutation.&nbsp;
+                                To do that, enter the size of the desired permutation in the first textbox.&nbsp;
+                                The degree of spread in randomness is controlled by the textbox to its right.&nbsp;
+                                Once you have entered this information, click the Run button directly to the right.&nbsp;
+                                Alternatively, press Enter while in one of these two textboxes.&nbsp;
+                                This will display a random affine permutation and the output of the AMBC algorithm when applied to that affine permutation.&nbsp;
+                        </p>
+                        <p>
+                                Instead, you can enter an affine permutation in the textbox labelled "Permutation".&nbsp;
+                                Enter the 1,...,n window for the permutation.&nbsp;
+                                The numbers should be separated by commas, with or without spaces between the numbers, with or without square braces.&nbsp;
+                                That is, you can enter 0,2,4 or 0, 2, 4 or [0,2,4] or [0, 2, 4].&nbsp;
+                                Then, click the Run button to the right of the Permutation textbox, or press Enter while in the textbox.&nbsp;
+                        </p>
+                        <p>
+                                The main use case for this page is to run multiple permutations, and then save the results to a PDF.&nbsp;
+                                The Comment textbox allows you to enter additional information, for example, a reduced expression for the permutation.&nbsp;
+                                This information will be displayed, to the right of the permutation, in the output.&nbsp;
+                                Pressing Enter when in the Comment textbox will run the permutation which is entered in the Permutation textbox.&nbsp;
+                        </p>
+                        <p>
+                                When you're ready to print your results to a PDF, you can hide the controls.&nbsp;
+                                To do this, click the little black box to the right of the Instructions button.&nbsp;
+                                Then press Ctrl-P (or right-click and select Print) to print the page to a PDF.&nbsp;
+                                After that, you can click the black box again to reveal the controls.&nbsp;
+                        </p>
+                        <p>
+                                As an alternative to printing to a PDF, you can also save your output by saving the page as Web Page, complete.
+                        </p>
+                        <p>
+                                You can use the Clear Last and Clear All buttons to remove output from the page.&nbsp;
+                        </p>
+                </div>
+                <div class="infoDiv" id="InformationDiv" style="display:none">
+                        <p>
+                                This is a port to JavaScript of Mike Chmutov's Java code for the Affine Matrix Ball Construction algorithm.&nbsp;
+                                The original code can be found here:  <a href="https://github.com/mchmutov/AMBC" target="_blank">https://github.com/mchmutov/AMBC</a>.&nbsp;
+                                The drawing code and the code to run the webpages are borrowed from the pages on my site:&nbsp; <a href="https://devragj.github.io/" target="_blank">https://devragj.github.io/</a>.&nbsp;
+                                The paper describing the Affine Matrix Ball Construction can be found here:&nbsp; <a href="https://arxiv.org/abs/1511.05861" target="_blank">Matrix-Ball Construction of affine Robinson-Schensted correspondence</a>.
+                        </p>
+                        <p>
+                                Please contact me at devra.johnson at verizon.net.
+                        </p>
+                </div>
+                <span>n =  <input type="number" max="20" min="1" id="nbox" size="2" value="10" onkeyup="Page.randomKey(event)"></span>
+                <span>Furthest Randomness = n* <input type="number" id="maxbox" max="5" min="1" size="2" value="2" onkeyup="Page.randomKey(event)"></span>
+                <span><button type="button" id="runRandomButton" class = "SmallButton" onclick="pageAMBC.runInput()">Run</button></span>
+                <span>Permutation: <input type="text" id="parameterBox"  size="50" onkeyup="Page.parameterKey(event)"></span>
+                <span><button type="button" id="runParameterButton" class = "SmallButton" onclick="pageAMBC.runParameter()">Run</button></span>
+                <span>Comment:  <input type="text" id="commentBox" size="40" onkeyup="Page.parameterKey(event)"></span>
+                <span><button type="button" id="clearLastButton" class = "MediumBigButton" onclick="pageAMBC.clearLastItems()">Clear Last</button></span>
+                <span><button type="button" id="clearAllButton" class = "MediumButton" onclick="pageAMBC.clearPrevious()">Clear All</button></span>
+        </div>
+</body>
+</html>
+
+<!-- MIT License
+
+Copyright (c) 2018 Michael Chmutov
+Copyright (c) 2016-2018 Devra Garfinkle Johnson
+Copyright (c) 2016 Christian Johnson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. -->

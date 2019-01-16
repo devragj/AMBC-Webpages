@@ -1,0 +1,5 @@
+TODO AMBC
+
+catch a permutation which is too big in all pages
+also for the reverse page, catch inputs which are too big.
+(for the reverse page, check the column?)
