@@ -1194,7 +1194,7 @@
                          * generates a random parameter.
                          */
                         runInput() {
-                                this.clearPrevious();
+                                // this.clearPrevious();
                                 try {
                                         let n = this.getN();
                                         let maxJump = this.getMaxJump();
@@ -1216,7 +1216,7 @@
                          * function which obtains the user input.
                          */
                         runParameter() {
-                                this.clearPrevious();
+                                // this.clearPrevious();
                                 try {
                                         let parameterObject = this.getParameterFromBox();
                                         this.displayInputAndOutput(parameterObject);
@@ -1232,9 +1232,18 @@
                          * to the algorithm.
                          */
                         displayInputAndOutput(parameterObject) {
-                                this.displayInfo(parameterObject);
+                                let wrapper = document.createElement('div');
+                                wrapper.className = "output";
+                                let infoWrapper = this.getInfoToDisplay(parameterObject);
+                                wrapper.appendChild(infoWrapper);
                                 let drawable = this.getDrawable(parameterObject, this.type);
-                                drawable.draw();
+                                wrapper.appendChild(new TabloidATripleRendererDOM(drawable).renderDOM());
+                                let outputList = document.getElementsByClassName("output");
+                                if (outputList.length == 0) {
+                                        document.body.appendChild(wrapper);
+                                } else {
+                                        document.body.insertBefore(wrapper, outputList[0]);
+                                }
                         }
 
                         /**
@@ -1274,7 +1283,34 @@
                                 parameterSpan.style.marginRight = "10px";
                                 parameterSpan.innerHTML = parameterObject.toString();
                                 wrapper.appendChild(parameterSpan);
+                                let commentSpan = document.createElement('span');
+                                commentSpan.style.marginLeft = "10px";
+                                let comment = document.getElementById("commentBox").value.trim();
+                                commentSpan.innerHTML= comment;
+                                wrapper.appendChild(commentSpan);
                                 document.body.appendChild(wrapper);
+                        }
+
+                        /**
+                         * This function wraps the parameter,
+                         * and any information entered into the comment box, in a div.
+                         * @param {Object} parameterObject - the parameter object which is the input
+                         * to the algorithm.
+                         * @return {Object} the div wrapping the information.
+                         */
+                        getInfoToDisplay(parameterObject) {
+                                let wrapper = document.createElement('div');
+                                wrapper.className = "comment";
+                                let parameterSpan = document.createElement('span');
+                                parameterSpan.style.marginRight = "10px";
+                                parameterSpan.innerHTML = parameterObject.toString();
+                                wrapper.appendChild(parameterSpan);
+                                let commentSpan = document.createElement('span');
+                                commentSpan.style.marginLeft = "10px";
+                                let comment = document.getElementById("commentBox").value.trim();
+                                commentSpan.innerHTML= comment;
+                                wrapper.appendChild(commentSpan);
+                                return wrapper;
                         }
 
                         /**
@@ -1283,6 +1319,10 @@
                          */
                         static clearItems(className) {
                                 let itemList = document.getElementsByClassName(className);
+                                if (itemList.length == 0) {
+                                        return;
+                                }
+
                                 for (let index = itemList.length - 1; index >= 0; --index) {
                                         let item = itemList[index];
                                         item.parentNode.removeChild(item);
@@ -1293,24 +1333,70 @@
                          * This function removes all output from the page.
                          */
                         clearPrevious() {
-                                this.clearList.forEach((type) => Page.clearItems(type));
+                                Page.clearItems("output");
                         }
 
                         /**
                          * This function removes the last item on the page which has the given CSS class.
                          * @param {string} className - the name of the CSS class to remove.
                          */
-                        static clearLastItem(className) {
+                        static clearTopItem(className) {
                                 let itemList = document.getElementsByClassName(className);
-                                let item = itemList[itemList.length - 1];
+                                if (itemList.length == 0) {
+                                        return;
+                                }
+
+                                let item = itemList[0];
                                 item.parentNode.removeChild(item);
                         }
 
                         /**
                          * This function removes the last item of each CSS class in the clear list.
                          */
-                        clearLastItems() {
-                                this.clearList.forEach((type) => Page.clearLastItem(type));
+                        clearTopItems() {
+                                Page.clearTopItem("output");
+                        }
+
+                        /**
+                         * This function removes the most recently added item
+                         * which is on the page.
+                         */
+                        clearLatestItem() {
+                                let itemList = document.getElementsByClassName("output");
+                                if (itemList.length == 0) {
+                                        return;
+                                }
+
+                                let item = itemList[0];
+                                item.parentNode.removeChild(item);
+                        }
+
+                        /**
+                         * This function removes the most recently added item
+                         * which is on the page.
+                         */
+                        reverseOutput() {
+                                let itemList = document.getElementsByClassName("output");
+                                if (itemList.length == 0) {
+                                        return;
+                                }
+
+                                for (let index = itemList.length; index-- > 0;) {
+                                        let wrapper = document.createElement('div');
+                                        wrapper.className = "reversed";
+                                        wrapper.innerHTML = itemList[index].innerHTML;
+                                        document.body.appendChild(wrapper);
+                                }
+
+
+                                Page.clearItems("output");
+
+                                itemList = document.getElementsByClassName("reversed");
+                                for (let index = itemList.length; index-- > 0;) {
+                                        let item = itemList[index];
+                                        item.classList.add("output");
+                                        item.classList.remove("reversed");
+                                }
                         }
 
                         /**
@@ -1391,10 +1477,12 @@
         <title>AMBC Algorithm</title>
 </head>
 <body>
+        <span id="showBox" class="showHide" onClick="Page.showControls()" style="display:none"></span>
         <div id="Controls" style="display:block">
                 <h3 style="margin-top: 10px">AMBC Algorithm
                         <button type="button" class="toggleButton" onclick="Page.toggleDiv(this)">Instructions</button>
                         <button type="button" class="toggleButton" onclick="Page.toggleDiv(this)">Information</button>
+                        <span id="hideBox" class="showHide" onClick="Page.hideControls()"></span>
                 </h3>
                 <div class="infoDiv" id="InstructionsDiv" style="display:none">
                         <p>
@@ -1405,6 +1493,7 @@
                                 Once you have entered this information, click the Run button directly to the right.&nbsp;
                                 Alternatively, press Enter while in one of these two textboxes.&nbsp;
                                 This will display a random affine permutation and the output of the AMBC algorithm when applied to that affine permutation.&nbsp;
+                                The most recent output is added at the top.
                         </p>
                         <p>
                                 Instead, you can enter an affine permutation in the textbox labelled "Permutation".&nbsp;
@@ -1412,6 +1501,26 @@
                                 The numbers should be separated by commas, with or without spaces between the numbers, with or without square braces.&nbsp;
                                 That is, you can enter 0,2,4 or 0, 2, 4 or [0,2,4] or [0, 2, 4].&nbsp;
                                 Then, click the Run button to the right of the Permutation textbox, or press Enter while in the textbox.&nbsp;
+                                The most recent output is added at the top.
+                        </p>
+                        <p>
+                                The main use case for this page is to run multiple permutations, and then save the results to a PDF.&nbsp;
+                                The Comment textbox allows you to enter additional information, for example, a reduced expression for the permutation.&nbsp;
+                                This information will be displayed, to the right of the permutation, in the output.&nbsp;
+                                Pressing Enter when in the Comment textbox will run the permutation which is entered in the Permutation textbox.&nbsp;
+                        </p>
+                        <p>
+                                When you're ready to print your results to a PDF, you can, if you like, use the Reverse Output button to reverse the order in which the results are displayed, so that the first results are on top.&nbsp;
+                                Also, you can hide the controls.&nbsp;
+                                To do this, click the little black box to the right of the Information button.&nbsp;
+                                Then press Ctrl-P (or right-click and select Print) to print the page to a PDF.&nbsp;
+                                After that, you can click the black box again to reveal the controls.&nbsp;
+                        </p>
+                        <p>
+                                As an alternative to printing to a PDF, you can also save your output by saving the page as Web Page, complete.
+                        </p>
+                        <p>
+                                You can use the Clear Top Item and Clear All buttons to remove output from the page.&nbsp;
                         </p>
                 </div>
                 <div class="infoDiv" id="InformationDiv" style="display:none">
@@ -1419,7 +1528,7 @@
                                 This is a port to JavaScript of Mike Chmutov's Java code for the Affine Matrix Ball Construction algorithm.&nbsp;
                                 The original code can be found here:  <a href="https://github.com/mchmutov/AMBC" target="_blank">https://github.com/mchmutov/AMBC</a>.&nbsp;
                                 The drawing code and the code to run the webpages are borrowed from the pages on my site:&nbsp; <a href="https://devragj.github.io/" target="_blank">https://devragj.github.io/</a>.&nbsp;
-                                The paper describing the Affine Matrix Ball Construction can be found here:&nbsp; <a href="https://arxiv.org/abs/1511.05861" target="_blank">Matrix-Ball Construction of affine Robinson-Schensted correspondence</a>.
+                                Two papers describing the Affine Matrix Ball Construction can be found at these links:&nbsp; <a href="https://arxiv.org/abs/1511.05861" target="_blank">Matrix-Ball Construction of affine Robinson-Schensted correspondence</a>, <a href="https://arxiv.org/abs/1706.00471" target="_blank">Monodromy in Kazhdan-Lusztig cells in affine type A</a>.
                         </p>
                         <p>
                                 Please contact me at devra.johnson at verizon.net.
@@ -1430,6 +1539,10 @@
                 <span><button type="button" id="runRandomButton" class = "SmallButton" onclick="pageAMBC.runInput()">Run</button></span>
                 <span>Permutation: <input type="text" id="parameterBox"  size="50" onkeyup="Page.parameterKey(event)"></span>
                 <span><button type="button" id="runParameterButton" class = "SmallButton" onclick="pageAMBC.runParameter()">Run</button></span>
+                <span>Comment:  <input type="text" id="commentBox" size="40" onkeyup="Page.parameterKey(event)"></span>
+                <span><button type="button" id="clearLastButton" class = "MediumBigButton" onclick="pageAMBC.clearTopItems()">Clear Top Item</button></span>
+                <span><button type="button" id="clearAllButton" class = "MediumButton" onclick="pageAMBC.clearPrevious()">Clear All</button></span>
+                <span><button type="button" id="reverseButton" class = "BigButton" onclick="pageAMBC.reverseOutput()">Reverse Output</button></span>
         </div>
 </body>
 </html>
